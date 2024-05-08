@@ -5,40 +5,38 @@
 #include <QDialog>
 #include <QMessageBox>
 #include <QLabel>
-#include <QFrame>
 #include <QIcon>
 #include <QLineEdit>
 #include <QDateTime>
 #include <QComboBox>
 #include <QProgressDialog>
 #include <QCheckBox>
-#include <QTableView>
 #include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPlainTextEdit>
-#include <QHeaderView>
-#include <QStandardItem>
-#include <QStandardItemModel>
 #include <QFileDialog>
 #include <string>
 #include <vector>
-#include <iostream>
 #include <time.h>
-#include <iostream>
-#include <sstream>
 #include <util.h>
 #include <myopengl.h>
 #include <thread>
 #include <ctime>
+#include <opencv2/highgui/highgui.hpp>
 
 class AutoLandMainWindow : public QDialog
 {
+    Q_OBJECT
+
     public:
         AutoLandMainWindow(QWidget *parent_widget)
         {
             setup();
         }
+    
+    signals:
+        void ip_test_terminate_signal();
 
     private:
         // 设置
@@ -55,14 +53,18 @@ class AutoLandMainWindow : public QDialog
         QLabel *estimator_label = new QLabel(this);
         QLabel *controller_label = new QLabel(this);
         QLabel *export_label = new QLabel(this);
+        QLabel *image_label = new QLabel(this);
+        QLabel *save_data_path_label = new QLabel(this);
         // 输入框
         QLineEdit *send_ip_addr_edit = new QLineEdit(this);
         QLineEdit *send_ip_port_edit = new QLineEdit(this);
         QLineEdit *recive_ip_addr_edit = new QLineEdit(this);
         QLineEdit *recive_ip_port_edit = new QLineEdit(this);
+        QLineEdit *save_data_path_edit = new QLineEdit(this);
         QPlainTextEdit *info_edit = new QPlainTextEdit(this);
         // 信息框
         QMessageBox *msg_box = new QMessageBox(this);
+        QProgressDialog *progress_win;
         // 按钮
         QPushButton *send_ip_test_button = new QPushButton(this);
         QPushButton *recive_ip_test_button = new QPushButton(this);
@@ -70,6 +72,7 @@ class AutoLandMainWindow : public QDialog
         QPushButton *clear_fig_button = new QPushButton(this);
         QPushButton *reset_fig_button = new QPushButton(this);
         QPushButton *show_real_fig_button = new QPushButton(this);
+        QPushButton *save_data_path_button = new QPushButton(this);
         // 下拉菜单
         QComboBox *estimator_combobox = new QComboBox(this);
         QComboBox *controller_combobox = new QComboBox(this);
@@ -87,9 +90,11 @@ class AutoLandMainWindow : public QDialog
             this->setWindowIcon(*icon);
             this->setFixedSize(1080, 800);
             this->setWindowTitle(("AutoLand GUI [Version: " + version + "]").c_str());
-            msg_box->setStyleSheet("QLineEdit{min-width: 300px;}");
 
             // 初始化组件
+            // 信息框设置
+            msg_box->setStyleSheet("QLineEdit{min-width: 300px;}");
+
             // 标题设置
             title_label->setText("Auto Land GUI");
             title_label->setStyleSheet("font-size: 28pt; font-weight: bold");
@@ -118,18 +123,24 @@ class AutoLandMainWindow : public QDialog
             info_edit->setReadOnly(true);
 
             // 导出数据模块
-            fig_export_checkbox->setText("导出图片");
+            fig_export_checkbox->setText("导出图片数据");
             fig_export_checkbox->setChecked(true);
-            data_export_checkbox->setText("导出轨迹");
+            data_export_checkbox->setText("导出轨迹数据");
             data_export_checkbox->setChecked(true);
             export_label->setText("数据导出设置：");
             export_checkbox->setText("开启数据保存");
             export_checkbox->setChecked(true);
+            save_data_path_label->setText("数据保存路径：");
+            save_data_path_button->setText("选择保存路径");
+            save_data_path_edit->setReadOnly(true);
 
-            // 绘图设置
+            // 轨迹绘图设置
             show_real_fig_button->setText("显示真实轨迹");
             clear_fig_button->setText("清除已有轨迹");
             reset_fig_button->setText("重置默认视图");
+
+            // 图像显示设置
+            image_label->setAlignment(Qt::AlignCenter);
 
             // 组件排版
             // 排版初始化
@@ -143,10 +154,12 @@ class AutoLandMainWindow : public QDialog
             QHBoxLayout *hbox_2_2 = new QHBoxLayout();
             QHBoxLayout *hbox_2_3 = new QHBoxLayout();
             QVBoxLayout *vbox_3 = new QVBoxLayout();
+            QHBoxLayout *hbox_save_path = new QHBoxLayout();
             QHBoxLayout *hbox_export_setting = new QHBoxLayout();
             QHBoxLayout *hbox_view_setting = new QHBoxLayout();
             QHBoxLayout *hbox_4 = new QHBoxLayout();
             QHBoxLayout *hbox_setting = new QHBoxLayout();
+            QVBoxLayout *vbox_data_show = new QVBoxLayout();
             QHBoxLayout *hbox_bottom = new QHBoxLayout();
             // 标题行
             vbox->addWidget(title_label);
@@ -176,21 +189,28 @@ class AutoLandMainWindow : public QDialog
             hbox_setting->addLayout(vbox_2, 1);
             hbox_setting->addLayout(vbox_3, 1);
             vbox->addLayout(hbox_setting);
-            // 导出设置
-            hbox_export_setting->addWidget(export_label);
-            hbox_export_setting->addWidget(export_checkbox);
-            hbox_export_setting->addWidget(fig_export_checkbox);
-            hbox_export_setting->addWidget(data_export_checkbox);
-            hbox_4->addLayout(hbox_export_setting);
+            // 保存路径设置
+            hbox_save_path->addWidget(save_data_path_label);
+            hbox_save_path->addWidget(save_data_path_edit);
+            hbox_save_path->addWidget(save_data_path_button);
+            vbox->addLayout(hbox_save_path);
             // 绘图设置
             hbox_view_setting->addWidget(reset_fig_button);
             hbox_view_setting->addWidget(clear_fig_button);
             hbox_view_setting->addWidget(show_real_fig_button);
             hbox_4->addLayout(hbox_view_setting);
             vbox->addLayout(hbox_4);
+            // 导出设置
+            hbox_export_setting->addWidget(export_label);
+            hbox_export_setting->addWidget(export_checkbox);
+            hbox_export_setting->addWidget(fig_export_checkbox);
+            hbox_export_setting->addWidget(data_export_checkbox);
+            hbox_4->addLayout(hbox_export_setting);
             // 命令框以及绘图
+            vbox_data_show->addWidget(opengl, 1);
+            vbox_data_show->addWidget(image_label, 1);
+            hbox_bottom->addLayout(vbox_data_show, 1);
             hbox_bottom->addWidget(info_edit, 1);
-            hbox_bottom->addWidget(opengl, 1);
             vbox->addLayout(hbox_bottom);
             // 设置布局
             this->setLayout(vbox);
@@ -203,6 +223,8 @@ class AutoLandMainWindow : public QDialog
             QObject::connect(show_real_fig_button, &QPushButton::clicked, this, &AutoLandMainWindow::show_real_fig_button_clicked_slot);
             QObject::connect(clear_fig_button, &QPushButton::clicked, this, &AutoLandMainWindow::clear_fig_button_clicked_slot);
             QObject::connect(reset_fig_button, &QPushButton::clicked, this, &AutoLandMainWindow::reset_fig_button_clicked_slot);
+            QObject::connect(save_data_path_button, &QPushButton::clicked, this, &AutoLandMainWindow::save_data_path_button_clicked_slot);
+            QObject::connect(this, &AutoLandMainWindow::ip_test_terminate_signal, this, &AutoLandMainWindow::ip_test_terminate_slot);
         }
 
         // 槽函数：发送ip服务器测试
@@ -211,58 +233,22 @@ class AutoLandMainWindow : public QDialog
             info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性...");
             QString ip = send_ip_addr_edit->text();
             QString port = send_ip_port_edit->text();
-            // 显示进度条
-            QProgressDialog *progress_win = new QProgressDialog(this);
+            // 单独线程测试
+            ip_test_result = -1;
+            std::thread ip_test_thread(&AutoLandMainWindow::ip_test_slot, this, ip.toStdString(), port.toStdString());
+            ip_test_thread.detach();
+            // 进度条设置
+            progress_win = new QProgressDialog(this);
             progress_win->setAttribute(Qt::WA_DeleteOnClose);
             progress_win->setMinimumWidth(600);                // 设置最小宽度
-            progress_win->setWindowModality(Qt::NonModal);     // 非模态，其它窗口正常交互  Qt::WindowModal 模态
+            progress_win->setWindowModality(Qt::WindowModal);  // 模态，不允许其它窗口交互  Qt::WindowModal 模态
             progress_win->setMinimumDuration(0);               // 等待0秒后显示
             progress_win->setWindowTitle(tr("IP 连通性测试")); // 标题名
             progress_win->setLabelText(tr("IP 连通性测试"));   // 标签的
             progress_win->setMinimum(0);
             progress_win->setMaximum(0);
+            // 显示进度条
             progress_win->open();
-            // 单独线程测试
-            ip_test_result = -1;
-            std::thread ip_test_thread(&AutoLandMainWindow::ip_test_slot, this, ip.toStdString(), port.toStdString());
-            ip_test_thread.detach();
-            usleep(500000);
-            while (ip_test_result == -1)
-            {
-                usleep(200000);
-            }
-            progress_win->close();
-            // 测试结果显示
-            msg_box->setIcon(QMessageBox::Icon::Critical);
-            msg_box->setText("Error");
-            msg_box->setWindowTitle("Error");
-            msg_box->setInformativeText("连接失败!");
-            switch (ip_test_result)
-            {
-            case TCPING_ERROR:
-                msg_box->setText("连接失败：输入格式错误");
-                msg_box->setInformativeText("请检查输入ip格式是否正确！");
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
-                break;
-            case TCPING_OPEN:
-                msg_box->setIcon(QMessageBox::Icon::Information);
-                msg_box->setText("连接成功");
-                msg_box->setWindowTitle("Info");
-                msg_box->setInformativeText("成功连接至" + ip + ":" + port);
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 成功");
-                break;
-            case TCPING_CLOSED:
-                msg_box->setText("连接失败：目标端口关闭");
-                msg_box->setInformativeText("连接目标主机ip成功，请检查端口设置是否正确！");
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
-                break;
-            case TCPING_TIMEOUT:
-                msg_box->setText("连接失败：目标主机超时");
-                msg_box->setInformativeText("连接目标主机ip失败，请检查ip是否输入正确，通信是否设置正确！");
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
-                break;
-            }
-            msg_box->exec();
         }
 
         // 槽函数：接收ip服务器测试
@@ -271,26 +257,28 @@ class AutoLandMainWindow : public QDialog
             info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性...");
             QString ip = recive_ip_addr_edit->text();
             QString port = recive_ip_port_edit->text();
-            // 显示进度条
-            QProgressDialog *progress_win = new QProgressDialog(this);
+            // 单独线程测试
+            ip_test_result = -1;
+            std::thread ip_test_thread(&AutoLandMainWindow::ip_test_slot, this, ip.toStdString(), port.toStdString());
+            ip_test_thread.detach();
+            // 进度条设置
+            progress_win = new QProgressDialog(this);
             progress_win->setAttribute(Qt::WA_DeleteOnClose);
             progress_win->setMinimumWidth(600);                // 设置最小宽度
-            progress_win->setWindowModality(Qt::NonModal);     // 非模态，其它窗口正常交互  Qt::WindowModal 模态
+            progress_win->setWindowModality(Qt::WindowModal);  // 模态，不允许其它窗口交互  Qt::WindowModal 模态
             progress_win->setMinimumDuration(0);               // 等待0秒后显示
             progress_win->setWindowTitle(tr("IP 连通性测试")); // 标题名
             progress_win->setLabelText(tr("IP 连通性测试"));   // 标签的
             progress_win->setMinimum(0);
             progress_win->setMaximum(0);
+            // 显示进度条
             progress_win->open();
-            // 单独线程测试
-            ip_test_result = -1;
-            std::thread ip_test_thread(&AutoLandMainWindow::ip_test_slot, this, ip.toStdString(), port.toStdString());
-            ip_test_thread.detach();
-            usleep(500000);
-            while (ip_test_result == -1)
-            {
-                usleep(200000);
-            }
+        }
+
+        // 槽函数：执行结果结束
+        void ip_test_terminate_slot()
+        {
+            // 关闭进度条
             progress_win->close();
             // 测试结果显示
             msg_box->setIcon(QMessageBox::Icon::Critical);
@@ -308,7 +296,7 @@ class AutoLandMainWindow : public QDialog
                 msg_box->setIcon(QMessageBox::Icon::Information);
                 msg_box->setText("连接成功");
                 msg_box->setWindowTitle("Info");
-                msg_box->setInformativeText("成功连接至" + ip + ":" + port);
+                msg_box->setInformativeText("成功连接!");
                 info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 成功");
                 break;
             case TCPING_CLOSED:
@@ -349,6 +337,8 @@ class AutoLandMainWindow : public QDialog
                 fig_export_checkbox->setChecked(true);
                 data_export_checkbox->setEnabled(true);
                 data_export_checkbox->setChecked(true);
+                save_data_path_button->setEnabled(true);
+                save_data_path_edit->setEnabled(true);
             }
             else // 取消勾选执行后端指令
             {
@@ -356,6 +346,8 @@ class AutoLandMainWindow : public QDialog
                 fig_export_checkbox->setChecked(false);
                 data_export_checkbox->setEnabled(false);
                 data_export_checkbox->setChecked(false);
+                save_data_path_button->setEnabled(false);
+                save_data_path_edit->setEnabled(false);
             }
         }
 
@@ -385,10 +377,20 @@ class AutoLandMainWindow : public QDialog
             
         }
 
+        // 槽函数：按下选择保存路径按钮
+        void save_data_path_button_clicked_slot()
+        {
+            char *cwd = getenv("HOME");
+            QString qfoldername = QFileDialog::getExistingDirectory(this, tr("选择文件夹"), cwd, QFileDialog::ShowDirsOnly);
+            save_data_path_edit->setText(qfoldername);
+        }
+
         // 工具函数：测试ip是否可达
         void ip_test_slot(const std::string ip, const std::string port)
         {
+            sleep(3);
             ip_test_result = check_connection(ip, port, 0, 200);
+            emit ip_test_terminate_signal();
         }
 
         // 工具函数：获取当前时间

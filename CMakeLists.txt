@@ -19,11 +19,19 @@ find_package(Qt5 COMPONENTS
 )
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
+find_package(OpenCV 4 REQUIRED)
+if(OpenCV_FOUND)
+    message(STATUS "OpenCV library: ${OpenCV_INSTALL_PATH}")
+    message(STATUS "    version: ${OpenCV_VERSION}")
+    message(STATUS "    libraries: ${OpenCV_LIBS}")
+    message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
+endif()
 
 # include dir
 include_directories(
     include
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 add_executable(${PROJECT_NAME} include/mathassist.h include/myopengl.h include/MainWindow.h src/mathassist.cpp src/myopengl.cpp src/main.cpp)
-target_link_libraries(${PROJECT_NAME} Qt5::Widgets ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} Qt5::Widgets ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${OpenCV_LIBS})
