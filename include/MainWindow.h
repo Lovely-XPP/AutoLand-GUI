@@ -16,6 +16,8 @@
 #include <QVBoxLayout>
 #include <QPlainTextEdit>
 #include <QFileDialog>
+#include <QImage>
+#include <QPixmap>
 #include <string>
 #include <vector>
 #include <time.h>
@@ -247,6 +249,7 @@ class AutoLandMainWindow : public QDialog
             progress_win->setLabelText(tr("IP 连通性测试"));   // 标签的
             progress_win->setMinimum(0);
             progress_win->setMaximum(0);
+            progress_win->setCancelButton(0);
             // 显示进度条
             progress_win->open();
         }
@@ -271,6 +274,7 @@ class AutoLandMainWindow : public QDialog
             progress_win->setLabelText(tr("IP 连通性测试"));   // 标签的
             progress_win->setMinimum(0);
             progress_win->setMaximum(0);
+            progress_win->setCancelButton(0);
             // 显示进度条
             progress_win->open();
         }
@@ -287,28 +291,28 @@ class AutoLandMainWindow : public QDialog
             msg_box->setInformativeText("连接失败!");
             switch (ip_test_result)
             {
-            case TCPING_ERROR:
-                msg_box->setText("连接失败：输入格式错误");
-                msg_box->setInformativeText("请检查输入ip格式是否正确！");
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
-                break;
-            case TCPING_OPEN:
-                msg_box->setIcon(QMessageBox::Icon::Information);
-                msg_box->setText("连接成功");
-                msg_box->setWindowTitle("Info");
-                msg_box->setInformativeText("成功连接!");
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 成功");
-                break;
-            case TCPING_CLOSED:
-                msg_box->setText("连接失败：目标端口关闭");
-                msg_box->setInformativeText("连接目标主机ip成功，请检查端口设置是否正确！");
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
-                break;
-            case TCPING_TIMEOUT:
-                msg_box->setText("连接失败：目标主机超时");
-                msg_box->setInformativeText("连接目标主机ip失败，请检查ip是否输入正确，通信是否设置正确！");
-                info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
-                break;
+                case TCPING_ERROR:
+                    msg_box->setText("连接失败：输入格式错误");
+                    msg_box->setInformativeText("请检查输入ip格式是否正确！");
+                    info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
+                    break;
+                case TCPING_OPEN:
+                    msg_box->setIcon(QMessageBox::Icon::Information);
+                    msg_box->setText("连接成功");
+                    msg_box->setWindowTitle("Info");
+                    msg_box->setInformativeText("成功连接!");
+                    info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 成功");
+                    break;
+                case TCPING_CLOSED:
+                    msg_box->setText("连接失败：目标端口关闭");
+                    msg_box->setInformativeText("连接目标主机ip成功，请检查端口设置是否正确！");
+                    info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
+                    break;
+                case TCPING_TIMEOUT:
+                    msg_box->setText("连接失败：目标主机超时");
+                    msg_box->setInformativeText("连接目标主机ip失败，请检查ip是否输入正确，通信是否设置正确！");
+                    info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性 - 失败");
+                    break;
             }
             msg_box->exec();
         }
@@ -384,6 +388,15 @@ class AutoLandMainWindow : public QDialog
             QString qfoldername = QFileDialog::getExistingDirectory(this, tr("选择文件夹"), cwd, QFileDialog::ShowDirsOnly);
             save_data_path_edit->setText(qfoldername);
         }
+        
+        // 槽函数：更新图片
+        void update_image_slot(cv::Mat &img)
+        {
+            QImage qimg = cvMat2QImage(img);
+            QPixmap temp_pixmap = QPixmap::fromImage(qimg);
+            QPixmap fit_pixmap = temp_pixmap.scaled(image_label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            image_label->setPixmap(fit_pixmap);
+        }
 
         // 工具函数：测试ip是否可达
         void ip_test_slot(const std::string ip, const std::string port)
@@ -397,6 +410,46 @@ class AutoLandMainWindow : public QDialog
         QString get_current_time()
         {
             return "[" + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + "] ";
+        }
+
+        // 工具函数：将OpenCV图像转换为QImage
+        QImage cvMat2QImage(const cv::Mat &mat) // Mat转换成QImage
+        {
+            // 注意,使用opencv Mat的buf给QImage赋值时,务必带入参数mat.step;因为step是计算生成的每一行元素的字节数,它是4字节对齐的;
+            // 否则如果输入图片的分辨率宽度不是4的整数倍,那么QImage会出现显示错乱的问题.
+            if (mat.type() == CV_8UC1) // 1通道
+            {
+                const uchar *pSrc = (const uchar *)mat.data;
+                QImage image = QImage(pSrc, mat.cols, mat.rows, mat.step, QImage::Format_Grayscale8);
+                return image;
+            }
+            else if (mat.type() == CV_8UC3) // 3通道
+            {
+                const uchar *pSrc = (const uchar *)mat.data;
+                QImage image(pSrc, mat.cols, mat.rows, mat.step, QImage::Format_RGB888); // 格式R,G,B,对应0,1,2
+                return image.rgbSwapped();                                               // rgbSwapped是为了将BGR格式转换为RGB格式
+            }
+            else if (mat.type() == CV_8UC4) // 4通道
+            {
+                const uchar *pSrc = (const uchar *)mat.data;
+                // Create QImage with same dimensions as input Mat
+                QImage image(pSrc, mat.cols, mat.rows, mat.step, QImage::Format_ARGB32); // 格式B,G,R,A对应0,1,2,3
+                return image.copy();
+            }
+            else if (mat.type() == CV_16SC3)
+            {
+                cv::Mat normalize_mat;
+                normalize(mat, normalize_mat, 0, 255, cv::NORM_MINMAX, -1);
+                normalize_mat.convertTo(normalize_mat, CV_8U);
+                const uchar *pSrc = (const uchar *)normalize_mat.data;
+                // Create QImage with same dimensions as input Mat
+                QImage image(pSrc, normalize_mat.cols, normalize_mat.rows, normalize_mat.step, QImage::Format_RGB888);
+                return image.rgbSwapped();
+            }
+            else
+            {
+                return QImage();
+            }
         }
 };
 
