@@ -8,8 +8,14 @@
 #include <QWheelEvent>
 #include <QVector3D>
 #include <vector>
+#ifdef __APPLE__
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
+#define GL_SILENCE_DEPRECATION 1
+#else
+#include <GL/gl.h>
+#include <GL/glu.h>
+#endif
 #include "mathassist.h"
 
 

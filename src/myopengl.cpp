@@ -5,9 +5,7 @@
 #include <unistd.h>
 #include <thread>
 #include <moc_myopengl.cpp>
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#define GL_SILENCE_DEPRECATION 1
+
 /*************************************************************************************************
  * receive from X-Plane
  * *******************************************************************************************************/

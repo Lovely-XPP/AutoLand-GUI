@@ -69,6 +69,7 @@ class AutoLandMainWindow : public QDialog
         QPushButton *start_button = new QPushButton(this);
         QPushButton *clear_fig_button = new QPushButton(this);
         QPushButton *reset_fig_button = new QPushButton(this);
+        QPushButton *show_real_fig_button = new QPushButton(this);
         // 下拉菜单
         QComboBox *estimator_combobox = new QComboBox(this);
         QComboBox *controller_combobox = new QComboBox(this);
@@ -84,7 +85,7 @@ class AutoLandMainWindow : public QDialog
             // 初始化
             QIcon *icon = new QIcon(QApplication::style()->standardIcon(QStyle::SP_FileIcon));
             this->setWindowIcon(*icon);
-            this->setFixedSize(1080, 500);
+            this->setFixedSize(1080, 800);
             this->setWindowTitle(("AutoLand GUI [Version: " + version + "]").c_str());
             msg_box->setStyleSheet("QLineEdit{min-width: 300px;}");
 
@@ -125,6 +126,11 @@ class AutoLandMainWindow : public QDialog
             export_checkbox->setText("开启数据保存");
             export_checkbox->setChecked(true);
 
+            // 绘图设置
+            show_real_fig_button->setText("显示真实轨迹");
+            clear_fig_button->setText("清除已有轨迹");
+            reset_fig_button->setText("重置默认视图");
+
             // 组件排版
             // 排版初始化
             QVBoxLayout *vbox = new QVBoxLayout();
@@ -139,7 +145,7 @@ class AutoLandMainWindow : public QDialog
             QVBoxLayout *vbox_3 = new QVBoxLayout();
             QHBoxLayout *hbox_export_setting = new QHBoxLayout();
             QHBoxLayout *hbox_view_setting = new QHBoxLayout();
-            QVBoxLayout *vbox_4 = new QVBoxLayout();
+            QHBoxLayout *hbox_4 = new QHBoxLayout();
             QHBoxLayout *hbox_setting = new QHBoxLayout();
             QHBoxLayout *hbox_bottom = new QHBoxLayout();
             // 标题行
@@ -175,7 +181,13 @@ class AutoLandMainWindow : public QDialog
             hbox_export_setting->addWidget(export_checkbox);
             hbox_export_setting->addWidget(fig_export_checkbox);
             hbox_export_setting->addWidget(data_export_checkbox);
-            vbox->addLayout(hbox_export_setting);
+            hbox_4->addLayout(hbox_export_setting);
+            // 绘图设置
+            hbox_view_setting->addWidget(reset_fig_button);
+            hbox_view_setting->addWidget(clear_fig_button);
+            hbox_view_setting->addWidget(show_real_fig_button);
+            hbox_4->addLayout(hbox_view_setting);
+            vbox->addLayout(hbox_4);
             // 命令框以及绘图
             hbox_bottom->addWidget(info_edit, 1);
             hbox_bottom->addWidget(opengl, 1);
@@ -186,9 +198,14 @@ class AutoLandMainWindow : public QDialog
             // 信号-槽 连接
             QObject::connect(recive_ip_test_button, &QPushButton::clicked, this, &AutoLandMainWindow::recive_ip_test_slot);
             QObject::connect(send_ip_test_button, &QPushButton::clicked, this, &AutoLandMainWindow::send_ip_test_slot);
+            QObject::connect(start_button, &QPushButton::clicked, this, &AutoLandMainWindow::run_slot);
+            QObject::connect(export_checkbox, &QCheckBox::stateChanged, this, &AutoLandMainWindow::export_checkbox_slot);
+            QObject::connect(show_real_fig_button, &QPushButton::clicked, this, &AutoLandMainWindow::show_real_fig_button_clicked_slot);
+            QObject::connect(clear_fig_button, &QPushButton::clicked, this, &AutoLandMainWindow::clear_fig_button_clicked_slot);
+            QObject::connect(reset_fig_button, &QPushButton::clicked, this, &AutoLandMainWindow::reset_fig_button_clicked_slot);
         }
 
-        // 发送ip槽函数
+        // 槽函数：发送ip服务器测试
         void send_ip_test_slot()
         {
             info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性...");
@@ -248,6 +265,7 @@ class AutoLandMainWindow : public QDialog
             msg_box->exec();
         }
 
+        // 槽函数：接收ip服务器测试
         void recive_ip_test_slot()
         {
             info_edit->appendPlainText(get_current_time() + "测试数据发送到对应服务器的连通性...");
@@ -307,12 +325,73 @@ class AutoLandMainWindow : public QDialog
             msg_box->exec();
         }
 
+        // 槽函数：运行执行函数
+        void run_slot()
+        {
+            // 开始运行后端指令
+            if (start_button->text() == "开始运行")
+            {
+                start_button->setText("停止运行");
+            }
+            else // 停止运行后端指令
+            {
+                start_button->setText("开始运行");
+            }
+        }
+
+        // 槽函数：勾选 / 取消勾选保存数据
+        void export_checkbox_slot()
+        {
+            // 勾选上执行后端指令
+            if (export_checkbox->isChecked())
+            {
+                fig_export_checkbox->setEnabled(true);
+                fig_export_checkbox->setChecked(true);
+                data_export_checkbox->setEnabled(true);
+                data_export_checkbox->setChecked(true);
+            }
+            else // 取消勾选执行后端指令
+            {
+                fig_export_checkbox->setEnabled(false);
+                fig_export_checkbox->setChecked(false);
+                data_export_checkbox->setEnabled(false);
+                data_export_checkbox->setChecked(false);
+            }
+        }
+
+        // 槽函数：按下显示/隐藏真实轨迹按钮
+        void show_real_fig_button_clicked_slot()
+        {
+            // 显示真实轨迹后端指令
+            if (show_real_fig_button->text() == "显示真实轨迹")
+            {
+                show_real_fig_button->setText("隐藏真实轨迹");
+            }
+            else // 隐藏真实轨迹后端指令
+            {
+                show_real_fig_button->setText("显示真实轨迹");
+            }
+        }
+
+        // 槽函数：按下清除已有轨迹按钮
+        void clear_fig_button_clicked_slot()
+        {
+            
+        }
+
+        // 槽函数：按下重置默认视图按钮
+        void reset_fig_button_clicked_slot()
+        {
+            
+        }
+
         // 工具函数：测试ip是否可达
         void ip_test_slot(const std::string ip, const std::string port)
         {
             ip_test_result = check_connection(ip, port, 0, 200);
         }
 
+        // 工具函数：获取当前时间
         QString get_current_time()
         {
             return "[" + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + "] ";
