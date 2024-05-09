@@ -16,6 +16,7 @@ find_package(Qt5 COMPONENTS
     Widgets
     Gui
     Core
+    DataVisualization
 )
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
@@ -33,5 +34,5 @@ include_directories(
     ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME} include/mathassist.h include/myopengl.h include/MainWindow.h src/mathassist.cpp src/myopengl.cpp src/main.cpp)
-target_link_libraries(${PROJECT_NAME} Qt5::Widgets ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${OpenCV_LIBS})
+add_executable(${PROJECT_NAME} include/MainWindow.h src/main.cpp)
+target_link_libraries(${PROJECT_NAME} Qt5::Widgets Qt5::DataVisualization ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${OpenCV_LIBS})

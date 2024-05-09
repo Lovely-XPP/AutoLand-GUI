@@ -18,11 +18,15 @@
 #include <QFileDialog>
 #include <QImage>
 #include <QPixmap>
+#include <QtDataVisualization/Q3DScatter>
+#include <QtDataVisualization/QScatterDataProxy>
+#include <QtDataVisualization/QScatterDataArray>
+#include <QtDataVisualization/QValue3DAxis>
+#include <QtDataVisualization/QAbstract3DGraph>
 #include <string>
 #include <vector>
 #include <time.h>
 #include <util.h>
-#include <myopengl.h>
 #include <thread>
 #include <ctime>
 #include <opencv2/highgui/highgui.hpp>
@@ -78,8 +82,9 @@ class AutoLandMainWindow : public QDialog
         // 下拉菜单
         QComboBox *estimator_combobox = new QComboBox(this);
         QComboBox *controller_combobox = new QComboBox(this);
-        // OpenGL
-        myOpenGL *opengl = new myOpenGL(this);
+        // 轨迹图
+        QtDataVisualization::Q3DScatter *graph = new QtDataVisualization::Q3DScatter();
+        QWidget *graph_container = new QWidget(this);
         // 复选框
         QCheckBox *fig_export_checkbox = new QCheckBox(this);
         QCheckBox *data_export_checkbox = new QCheckBox(this);
@@ -140,7 +145,30 @@ class AutoLandMainWindow : public QDialog
             show_real_fig_button->setText("显示真实轨迹");
             clear_fig_button->setText("清除已有轨迹");
             reset_fig_button->setText("重置默认视图");
-
+            QWidget *graph_container = QWidget::createWindowContainer(graph);
+            // 设置 x、y、z 轴的标签
+            graph->axisX()->setTitle("X Axis");
+            graph->axisY()->setTitle("Y Axis");
+            graph->axisZ()->setTitle("Z Axis");
+            // 创建散点图数据
+            QtDataVisualization::QScatterDataArray data;
+            data << QVector3D(1.0f, 1.0f, 1.0f) << QVector3D(2.0f, 2.0f, 2.0f)
+                 << QVector3D(3.0f, 3.0f, 3.0f) << QVector3D(4.0f, 4.0f, 4.0f);
+            // 创建数据代理，并将数据添加到代理中
+            QtDataVisualization::QScatterDataProxy *proxy = new QtDataVisualization::QScatterDataProxy();
+            proxy->addItems(data);
+            // 创建系列，并将数据代理添加到系列中
+            QtDataVisualization::QScatter3DSeries *series = new QtDataVisualization::QScatter3DSeries(proxy);
+            series->setItemSize(0.2f);
+            series->setMeshSmooth(true);
+            // 将系列添加到图表中
+            graph->addSeries(series);
+            graph->setShadowQuality(QtDataVisualization::QAbstract3DGraph::ShadowQualityNone);
+            graph->setMouseGrabEnabled(true);
+            graph->setReflection(false);
+            graph->setReflectivity(false);
+            graph->scene()->activeCamera();
+            graph->activeTheme()->setGridEnabled(true);
             // 图像显示设置
             image_label->setAlignment(Qt::AlignCenter);
 
@@ -209,7 +237,7 @@ class AutoLandMainWindow : public QDialog
             hbox_export_setting->addWidget(data_export_checkbox);
             hbox_4->addLayout(hbox_export_setting);
             // 命令框以及绘图
-            vbox_data_show->addWidget(opengl, 1);
+            vbox_data_show->addWidget(graph_container, 1);
             vbox_data_show->addWidget(image_label, 1);
             hbox_bottom->addLayout(vbox_data_show, 1);
             hbox_bottom->addWidget(info_edit, 1);
