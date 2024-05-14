@@ -215,7 +215,7 @@ class AutoLandMainWindow : public QDialog
             // 设置文字的颜色，使用BGR格式
             cv::Scalar color = cv::Scalar(0, 0, 0); // 红色文字
             // 设置文字的厚度
-            int thickness = 2;
+            int thickness = 5;
             // 在图片上添加文字
             cv::putText(white_image, text, textOrg, fontFace, fontScale, color, thickness);
             update_image_slot(white_image);
