@@ -46,8 +46,9 @@ class AutoLandMainWindow : public QDialog
         AutoLandMainWindow(QWidget *parent_widget)
         {
             setup();
+            select_axis_range = x_range;
         }
-    
+
     signals:
         void ip_test_terminate_signal();
         void update_vision_signal();
@@ -57,6 +58,10 @@ class AutoLandMainWindow : public QDialog
         std::string version = "V1.0.1";
         int ip_test_result = 0;
         double init_zoom_level = 0;
+        int x_range[2] = {0, 1};
+        int y_range[2] = {0, 1};
+        int z_range[2] = {0, 1};
+        int *select_axis_range = nullptr;
 
         // 组件初始化
         // 标签类
@@ -73,6 +78,8 @@ class AutoLandMainWindow : public QDialog
         QLabel *camera_yaw_label = new QLabel(this);
         QLabel *camera_pitch_label = new QLabel(this);
         QLabel *camera_zoom_label = new QLabel(this);
+        QLabel *axis_range_label = new QLabel(this);
+        QLabel *axis_range_gap_label = new QLabel(this);
         // 输入框
         QLineEdit *send_ip_addr_edit = new QLineEdit(this);
         QLineEdit *send_ip_port_edit = new QLineEdit(this);
@@ -83,6 +90,8 @@ class AutoLandMainWindow : public QDialog
         QLineEdit *camera_yaw_edit = new QLineEdit(this);
         QLineEdit *camera_pitch_edit = new QLineEdit(this);
         QLineEdit *camera_zoom_edit = new QLineEdit(this);
+        QLineEdit *axis_range_min_edit = new QLineEdit(this);
+        QLineEdit *axis_range_max_edit = new QLineEdit(this);
         // 信息框
         QMessageBox *msg_box = new QMessageBox(this);
         QProgressDialog *progress_win;
@@ -95,9 +104,12 @@ class AutoLandMainWindow : public QDialog
         QPushButton *show_real_fig_button = new QPushButton(this);
         QPushButton *save_data_path_button = new QPushButton(this);
         QPushButton *get_vision_setting_button = new QPushButton(this);
+        QPushButton *get_axis_range_button = new QPushButton(this);
+        QPushButton *apply_axis_range_button = new QPushButton(this);
         // 下拉菜单
         QComboBox *estimator_combobox = new QComboBox(this);
         QComboBox *controller_combobox = new QComboBox(this);
+        QComboBox *axis_select_combobox = new QComboBox(this);
         // 轨迹图
         QtDataVisualization::Q3DScatter *graph = new QtDataVisualization::Q3DScatter();
         QWidget *graph_container = new QWidget(this);
@@ -109,7 +121,14 @@ class AutoLandMainWindow : public QDialog
         QSlider *camera_pitch_slider = new QSlider(this);
         QSlider *camera_yaw_slider = new QSlider(this);
         QSlider *camera_zoom_slider = new QSlider(this);
+        // 轨迹数据
+        QtDataVisualization::QScatterDataArray *estimate_data = new QtDataVisualization::QScatterDataArray();
+        QtDataVisualization::QScatterDataArray *real_data = new QtDataVisualization::QScatterDataArray();
+        // 创建系列，并将数据代理添加到系列中
+        QtDataVisualization::QScatter3DSeries *estimate_series = new QtDataVisualization::QScatter3DSeries();
+        QtDataVisualization::QScatter3DSeries *real_series = new QtDataVisualization::QScatter3DSeries();
 
+        // 初始化组件
         void setup()
         {
             // 初始化
@@ -174,29 +193,36 @@ class AutoLandMainWindow : public QDialog
             reset_fig_button->setText("重置默认视图");
             get_vision_setting_button->setText("获取当前视图");
             QWidget *graph_container = QWidget::createWindowContainer(graph);
-            // 设置 x、y、z 轴的标签
-            graph->axisX()->setTitle("X Axis");
-            graph->axisY()->setTitle("Y Axis");
-            graph->axisZ()->setTitle("Z Axis");
-            // 创建散点图数据
-            QtDataVisualization::QScatterDataArray data;
-            data << QVector3D(1.0f, 1.0f, 1.0f) << QVector3D(2.0f, 2.0f, 2.0f)
-                 << QVector3D(3.0f, 3.0f, 3.0f) << QVector3D(4.0f, 4.0f, 4.0f);
-            // 创建数据代理，并将数据添加到代理中
-            QtDataVisualization::QScatterDataProxy *proxy = new QtDataVisualization::QScatterDataProxy();
-            proxy->addItems(data);
-            // 创建系列，并将数据代理添加到系列中
-            QtDataVisualization::QScatter3DSeries *series = new QtDataVisualization::QScatter3DSeries(proxy);
-            series->setItemSize(0.2f);
-            series->setMeshSmooth(true);
+            graph_container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+            // 添加散点图
+            estimate_series->setMeshSmooth(true);
+            estimate_series->setItemLabelFormat(QStringLiteral("(@xLabel, @zLabel, @yLabel)"));
+            real_series->setMeshSmooth(true);
+            real_series->setItemLabelFormat(QStringLiteral("(@xLabel, @zLabel, @yLabel)"));
             // 将系列添加到图表中
-            graph->addSeries(series);
+            graph->addSeries(estimate_series);
+            graph->addSeries(real_series);
+            // 添加数据并更新数据
+            *estimate_data << QVector3D(0, 1, 1) << QVector3D(0, 1, 2);
+            *real_data << QVector3D(2, 1, 1) << QVector3D(2, 1, 2);
+            estimate_series->dataProxy()->resetArray(estimate_data);
+            real_series->dataProxy()->resetArray(real_data);
             graph->setShadowQuality(QtDataVisualization::QAbstract3DGraph::ShadowQualityNone);
             graph->setMouseGrabEnabled(true);
             graph->setReflection(false);
             graph->setReflectivity(false);
             graph->activeTheme()->setGridEnabled(true);
             init_zoom_level = graph->scene()->activeCamera()->zoomLevel();
+            // 设置 x、y、z 轴的标签
+            graph->axisX()->setTitle("X");
+            graph->axisY()->setTitle("Z");
+            graph->axisZ()->setTitle("Y");
+            graph->axisX()->setTitleVisible(true);
+            graph->axisY()->setTitleVisible(true);
+            graph->axisZ()->setTitleVisible(true);
+            graph->activeTheme()->setBackgroundEnabled(false);
+            graph->activeTheme()->setFont(QFont("Times New Roman", 45));
+            graph->activeTheme()->setLabelBackgroundEnabled(true);
 
             // 图像显示设置
             image_label->setAlignment(Qt::AlignCenter);
@@ -220,9 +246,26 @@ class AutoLandMainWindow : public QDialog
             cv::putText(white_image, text, textOrg, fontFace, fontScale, color, thickness);
             update_image_slot(white_image);
 
+            // 坐标轴显示设置
+            get_axis_range_button->setText("读取");
+            apply_axis_range_button->setText("应用");
+            QIntValidator *axis_range_validator = new QIntValidator(this);
+            axis_range_label->setText("坐标轴范围设置：");
+            axis_select_combobox->addItem("X轴");
+            axis_select_combobox->addItem("Y轴");
+            axis_select_combobox->addItem("Z轴");
+            axis_range_gap_label->setText("—");
+            axis_range_min_edit->setValidator(axis_range_validator);
+            axis_range_max_edit->setValidator(axis_range_validator);
+            axis_range_min_edit->setAlignment(Qt::AlignCenter);
+            axis_range_max_edit->setAlignment(Qt::AlignCenter);
+            axis_select_combobox->setCurrentIndex(0);
+            axis_range_min_edit->setText(QString::number(x_range[0]));
+            axis_range_max_edit->setText(QString::number(x_range[1]));
+
             // 绘图视角设置
             QIntValidator *angle_validator = new QIntValidator(-180, 180, this);
-            QIntValidator *zoom_validator = new QIntValidator(0, 200, this);
+            QIntValidator *zoom_validator = new QIntValidator(-200, 200, this);
             // 俯仰角部分设置
             camera_pitch_label->setText("视场俯仰角设置：");
             camera_pitch_slider->setTickPosition(QSlider::TicksAbove);
@@ -247,7 +290,7 @@ class AutoLandMainWindow : public QDialog
             camera_zoom_label->setText("视场缩放值设置：");
             camera_zoom_slider->setTickPosition(QSlider::TicksAbove);
             camera_zoom_slider->setTickInterval(20);
-            camera_zoom_slider->setRange(0, 200);
+            camera_zoom_slider->setRange(-200, 200);
             camera_zoom_slider->setOrientation(Qt::Horizontal);
             camera_zoom_edit->setMaximumWidth(50);
             camera_zoom_edit->setText("0");
@@ -274,6 +317,7 @@ class AutoLandMainWindow : public QDialog
             QVBoxLayout *vbox_data_show = new QVBoxLayout();
             QHBoxLayout *hbox_bottom = new QHBoxLayout();
             QVBoxLayout *vbox_traj = new QVBoxLayout();
+            QHBoxLayout *hbox_axis_range = new QHBoxLayout();
             QHBoxLayout *hbox_camera_pitch = new QHBoxLayout();
             QHBoxLayout *hbox_camera_yaw = new QHBoxLayout();
             QHBoxLayout *hbox_camera_zoom = new QHBoxLayout();
@@ -329,15 +373,29 @@ class AutoLandMainWindow : public QDialog
             vbox_data_show->addWidget(info_edit, 1);
             hbox_bottom->addLayout(vbox_data_show, 1);
             // 轨迹显示与显示设置
+            vbox_traj->setSpacing(10);
             vbox_traj->addWidget(graph_container);
+            hbox_axis_range->setSpacing(5);
+            hbox_axis_range->addWidget(axis_range_label);
+            hbox_axis_range->addWidget(axis_select_combobox);
+            hbox_axis_range->addWidget(axis_range_min_edit);
+            hbox_axis_range->addWidget(axis_range_gap_label);
+            hbox_axis_range->addWidget(axis_range_max_edit);
+            hbox_axis_range->addSpacing(5);
+            hbox_axis_range->addWidget(get_axis_range_button);
+            hbox_axis_range->addWidget(apply_axis_range_button);
+            vbox_traj->addLayout(hbox_axis_range);
+            hbox_camera_zoom->setSpacing(5);
             hbox_camera_zoom->addWidget(camera_zoom_label);
             hbox_camera_zoom->addWidget(camera_zoom_slider);
             hbox_camera_zoom->addWidget(camera_zoom_edit);
             vbox_traj->addLayout(hbox_camera_zoom);
+            hbox_camera_pitch->setSpacing(5);
             hbox_camera_pitch->addWidget(camera_pitch_label);
             hbox_camera_pitch->addWidget(camera_pitch_slider);
             hbox_camera_pitch->addWidget(camera_pitch_edit);
             vbox_traj->addLayout(hbox_camera_pitch);
+            hbox_camera_yaw->setSpacing(5);
             hbox_camera_yaw->addWidget(camera_yaw_label);
             hbox_camera_yaw->addWidget(camera_yaw_slider);
             hbox_camera_yaw->addWidget(camera_yaw_edit);
@@ -363,6 +421,10 @@ class AutoLandMainWindow : public QDialog
             QObject::connect(camera_pitch_edit, &QLineEdit::textChanged, this, &AutoLandMainWindow::camera_pitch_edit_changed_slot);
             QObject::connect(camera_yaw_edit, &QLineEdit::textChanged, this, &AutoLandMainWindow::camera_yaw_edit_changed_slot);
             QObject::connect(camera_zoom_edit, &QLineEdit::textChanged, this, &AutoLandMainWindow::camera_zoom_edit_changed_slot);
+            QObject::connect(axis_select_combobox, QOverload<int>::of(&QComboBox::activated), this, &AutoLandMainWindow::axis_select_combobox_activated_slot);
+            QObject::connect(axis_select_combobox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AutoLandMainWindow::axis_select_combobox_changed_slot);
+            QObject::connect(get_axis_range_button, &QPushButton::clicked, this, &AutoLandMainWindow::get_axis_range_button_clicked_slot);
+            QObject::connect(apply_axis_range_button, &QPushButton::clicked, this, &AutoLandMainWindow::apply_axis_range_button_clicked_slot);
             QObject::connect(this, &AutoLandMainWindow::ip_test_terminate_signal, this, &AutoLandMainWindow::ip_test_terminate_slot);
             QObject::connect(this, &AutoLandMainWindow::update_vision_signal, this, &AutoLandMainWindow::update_vision_slot);
         }
@@ -555,13 +617,106 @@ class AutoLandMainWindow : public QDialog
             emit update_vision_signal();
         }
 
+        // 槽函数：保存当前坐标范围最小值
+        void axis_range_min_edit_changed_slot()
+        {
+            select_axis_range[0] = axis_range_min_edit->text().toInt();
+        }
+
+        // 槽函数：保存当前坐标范围最大值
+        void axis_range_max_edit_changed_slot()
+        {
+            select_axis_range[1] = axis_range_max_edit->text().toInt();
+        }
+
+        // 槽函数：读取当前坐标轴范围设置
+        void get_axis_range_button_clicked_slot()
+        {
+            x_range[0] = graph->axisX()->min();
+            x_range[1] = graph->axisX()->max();
+            y_range[0] = graph->axisZ()->min();
+            y_range[1] = graph->axisZ()->max();
+            z_range[0] = graph->axisY()->min();
+            z_range[1] = graph->axisY()->max();
+            axis_select_combobox_changed_slot();
+        }
+
+        // 槽函数：应用当前坐标轴范围设置
+        void apply_axis_range_button_clicked_slot()
+        {
+            if (!axis_select_combobox_activated_slot())
+            {
+                return;
+            }
+            graph->axisX()->setMin(x_range[0]);
+            graph->axisX()->setMax(x_range[1]);
+            graph->axisZ()->setMin(y_range[0]);
+            graph->axisZ()->setMax(y_range[1]);
+            graph->axisY()->setMin(z_range[0]);
+            graph->axisY()->setMax(z_range[1]);
+        }
+
+        // 槽函数：保存当前设置的坐标范围
+        bool axis_select_combobox_activated_slot()
+        {
+            switch (axis_select_combobox->currentIndex())
+            {
+                case 0:
+                    select_axis_range = x_range;
+                    break;
+                case 1:
+                    select_axis_range = y_range;
+                    break;
+                case 2:
+                    select_axis_range = z_range;
+                    break;
+                default:
+                    break;
+            }
+            int min = axis_range_min_edit->text().toInt();
+            int max = axis_range_max_edit->text().toInt();
+            if (min >= max)
+            {
+                msg_box->setIcon(QMessageBox::Icon::Critical);
+                msg_box->setText("坐标轴范围设置逻辑错误  ");
+                msg_box->setWindowTitle("Error");
+                msg_box->setInformativeText("范围最大值不能小于最小值！");
+                msg_box->exec();
+                return false;
+            }
+            select_axis_range[0] = min;
+            select_axis_range[1] = max;
+            return true;
+        }
+
+        // 槽函数：切换选择的坐标范围
+        void axis_select_combobox_changed_slot()
+        {
+            switch (axis_select_combobox->currentIndex())
+            {
+            case 0:
+                select_axis_range = x_range;
+                break;
+            case 1:
+                select_axis_range = y_range;
+                break;
+            case 2:
+                select_axis_range = z_range;
+                break;
+            default:
+                break;
+            }
+            axis_range_min_edit->setText(QString::number(select_axis_range[0]));
+            axis_range_max_edit->setText(QString::number(select_axis_range[1]));
+        }
+
         // 槽函数：更新俯仰视场角
         void camera_pitch_edit_changed_slot()
         {
             camera_pitch_slider->blockSignals(true);
             camera_pitch_slider->setValue(camera_pitch_edit->text().toInt());
             camera_pitch_slider->blockSignals(false);
-            emit update_vision_signal();
+            graph->scene()->activeCamera()->setXRotation(camera_pitch_slider->value());
         }
 
         // 槽函数：更新偏航视场角
@@ -570,7 +725,7 @@ class AutoLandMainWindow : public QDialog
             camera_yaw_slider->blockSignals(true);
             camera_yaw_slider->setValue(camera_yaw_edit->text().toInt());
             camera_yaw_slider->blockSignals(false);
-            emit update_vision_signal();
+            graph->scene()->activeCamera()->setYRotation(camera_yaw_slider->value());
         }
 
         // 槽函数：更新视场缩放值
@@ -579,7 +734,7 @@ class AutoLandMainWindow : public QDialog
             camera_zoom_slider->blockSignals(true);
             camera_zoom_slider->setValue(camera_zoom_edit->text().toInt());
             camera_zoom_slider->blockSignals(false);
-            emit update_vision_signal();
+            graph->scene()->activeCamera()->setZoomLevel(init_zoom_level + camera_zoom_slider->value());
         }
 
         // 槽函数：更新俯仰视场角
@@ -588,7 +743,7 @@ class AutoLandMainWindow : public QDialog
             camera_pitch_edit->blockSignals(true);
             camera_pitch_edit->setText(QString::number(camera_pitch_slider->value()));
             camera_pitch_edit->blockSignals(false);
-            emit update_vision_signal();
+            graph->scene()->activeCamera()->setXRotation(camera_pitch_slider->value());
         }
 
         // 槽函数：更新偏航视场角
@@ -597,7 +752,7 @@ class AutoLandMainWindow : public QDialog
             camera_yaw_edit->blockSignals(true);
             camera_yaw_edit->setText(QString::number(camera_yaw_slider->value()));
             camera_yaw_edit->blockSignals(false);
-            emit update_vision_signal();
+            graph->scene()->activeCamera()->setYRotation(camera_yaw_slider->value());
         }
 
         // 槽函数：更新视场缩放值
@@ -606,7 +761,7 @@ class AutoLandMainWindow : public QDialog
             camera_zoom_edit->blockSignals(true);
             camera_zoom_edit->setText(QString::number(camera_zoom_slider->value()));
             camera_zoom_edit->blockSignals(false);
-            emit update_vision_signal();
+            graph->scene()->activeCamera()->setZoomLevel(init_zoom_level + camera_zoom_slider->value());
         }
 
         // 槽函数：更新图片
