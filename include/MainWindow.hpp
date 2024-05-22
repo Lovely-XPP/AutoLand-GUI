@@ -31,16 +31,24 @@
 #include <string>
 #include <vector>
 #include <time.h>
-#include <util.hpp>
 #include <thread>
 #include <ctime>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
+#include <DataReplayWindow.hpp>
+#include <util.hpp>
+
 class AutoLandMainWindow : public QDialog
 {
     Q_OBJECT
+
+    enum RUN_MODE
+    {
+        SIMULATION,
+        REPLAY
+    };
 
     public:
         AutoLandMainWindow(QWidget *parent_widget)
@@ -56,12 +64,13 @@ class AutoLandMainWindow : public QDialog
     private:
         // 设置
         std::string version = "V1.0.1";
-        int ip_test_result = 0;
-        double init_zoom_level = 0;
-        int x_range[2] = {0, 1};
-        int y_range[2] = {0, 1};
-        int z_range[2] = {0, 1};
-        int *select_axis_range = nullptr;
+        int ip_test_result = 0; // ip 测试结果
+        double init_zoom_level = 0; // 初始缩放水平
+        int x_range[2] = {0, 1}; // X轴范围
+        int y_range[2] = {0, 1}; // Y轴范围
+        int z_range[2] = {0, 1}; // Z轴范围
+        int *select_axis_range = nullptr; // 当前选择需要设置范围的坐标轴指针
+        RUN_MODE run_mode; // 程序运行模式
 
         // 组件初始化
         // 标签类
@@ -137,6 +146,7 @@ class AutoLandMainWindow : public QDialog
             this->setWindowIcon(*icon);
             this->setFixedSize(1080, 800);
             this->setWindowTitle(("AutoLand GUI [Version: " + version + "]").c_str());
+            this->setAttribute(Qt::WA_DeleteOnClose);
 
             // 初始化组件
             // 信息框设置
@@ -436,6 +446,7 @@ class AutoLandMainWindow : public QDialog
             QObject::connect(axis_select_combobox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AutoLandMainWindow::axis_select_combobox_changed_slot);
             QObject::connect(get_axis_range_button, &QPushButton::clicked, this, &AutoLandMainWindow::get_axis_range_button_clicked_slot);
             QObject::connect(apply_axis_range_button, &QPushButton::clicked, this, &AutoLandMainWindow::apply_axis_range_button_clicked_slot);
+            QObject::connect(data_replay_button, &QPushButton::clicked, this , &AutoLandMainWindow::data_replay_button_pushed_slot);
             QObject::connect(this, &AutoLandMainWindow::ip_test_terminate_signal, this, &AutoLandMainWindow::ip_test_terminate_slot);
             QObject::connect(this, &AutoLandMainWindow::update_vision_signal, this, &AutoLandMainWindow::update_vision_slot);
         }
@@ -535,10 +546,16 @@ class AutoLandMainWindow : public QDialog
             if (start_button->text() == "开始运行")
             {
                 start_button->setText("停止运行");
+                data_replay_button->setEnabled(false);
+                recive_ip_test_button->setEnabled(false);
+                send_ip_test_button->setEnabled(false);
             }
             else // 停止运行后端指令
             {
                 start_button->setText("开始运行");
+                data_replay_button->setEnabled(true);
+                recive_ip_test_button->setEnabled(true);
+                send_ip_test_button->setEnabled(true);
             }
         }
 
@@ -705,17 +722,17 @@ class AutoLandMainWindow : public QDialog
         {
             switch (axis_select_combobox->currentIndex())
             {
-            case 0:
-                select_axis_range = x_range;
-                break;
-            case 1:
-                select_axis_range = y_range;
-                break;
-            case 2:
-                select_axis_range = z_range;
-                break;
-            default:
-                break;
+                case 0:
+                    select_axis_range = x_range;
+                    break;
+                case 1:
+                    select_axis_range = y_range;
+                    break;
+                case 2:
+                    select_axis_range = z_range;
+                    break;
+                default:
+                    break;
             }
             axis_range_min_edit->setText(QString::number(select_axis_range[0]));
             axis_range_max_edit->setText(QString::number(select_axis_range[1]));
@@ -790,6 +807,13 @@ class AutoLandMainWindow : public QDialog
             graph->scene()->activeCamera()->setXRotation(camera_pitch_slider->value());
             graph->scene()->activeCamera()->setYRotation(camera_yaw_slider->value());
             graph->scene()->activeCamera()->setZoomLevel(init_zoom_level + camera_zoom_slider->value());
+        }
+
+        // 槽函数：数据回放模式
+        void data_replay_button_pushed_slot()
+        {
+            DataReplayWindow *replay_window = new DataReplayWindow(this);
+            replay_window->exec();
         }
 
         // 工具函数：测试ip是否可达
