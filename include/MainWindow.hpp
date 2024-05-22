@@ -1,5 +1,5 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef MAINWINDOW_HPP
+#define MAINWINDOW_HPP
 #include <QMainWindow>
 #include <QApplication>
 #include <QDialog>
@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 #include <time.h>
-#include <util.h>
+#include <util.hpp>
 #include <thread>
 #include <ctime>
 #include <iostream>
@@ -106,6 +106,7 @@ class AutoLandMainWindow : public QDialog
         QPushButton *get_vision_setting_button = new QPushButton(this);
         QPushButton *get_axis_range_button = new QPushButton(this);
         QPushButton *apply_axis_range_button = new QPushButton(this);
+        QPushButton *data_replay_button = new QPushButton(this);
         // 下拉菜单
         QComboBox *estimator_combobox = new QComboBox(this);
         QComboBox *controller_combobox = new QComboBox(this);
@@ -297,23 +298,28 @@ class AutoLandMainWindow : public QDialog
             camera_zoom_edit->setValidator(zoom_validator);
             camera_zoom_edit->setAlignment(Qt::AlignCenter);
 
+            // 数据回放设置
+            data_replay_button->setText("数据回放");
+
             // 组件排版
             // 排版初始化
             QVBoxLayout *vbox = new QVBoxLayout();
-            QVBoxLayout *vbox_1 = new QVBoxLayout();
-            QHBoxLayout *hbox_1_1 = new QHBoxLayout();
-            QHBoxLayout *hbox_1_2 = new QHBoxLayout();
-            QHBoxLayout *hbox_1_3 = new QHBoxLayout();
-            QVBoxLayout *vbox_2 = new QVBoxLayout();
-            QHBoxLayout *hbox_2_1 = new QHBoxLayout();
-            QHBoxLayout *hbox_2_2 = new QHBoxLayout();
-            QHBoxLayout *hbox_2_3 = new QHBoxLayout();
-            QVBoxLayout *vbox_3 = new QVBoxLayout();
+            QVBoxLayout *vbox_ip_addr = new QVBoxLayout();
+            QHBoxLayout *hbox_ip_addr_1 = new QHBoxLayout();
+            QHBoxLayout *hbox_ip_addr_2 = new QHBoxLayout();
+            QHBoxLayout *hbox_ip_addr_3 = new QHBoxLayout();
+            QVBoxLayout *vbox_ip_port = new QVBoxLayout();
+            QHBoxLayout *hbox_ip_port_1 = new QHBoxLayout();
+            QHBoxLayout *hbox_ip_port_2 = new QHBoxLayout();
+            QHBoxLayout *hbox_ip_port_3 = new QHBoxLayout();
+            QVBoxLayout *vbox_top_buttons = new QVBoxLayout();
             QHBoxLayout *hbox_save_path = new QHBoxLayout();
+            QVBoxLayout *vbox_top_setting = new QVBoxLayout();
             QHBoxLayout *hbox_export_setting = new QHBoxLayout();
             QHBoxLayout *hbox_view_setting = new QHBoxLayout();
             QHBoxLayout *hbox_4 = new QHBoxLayout();
-            QHBoxLayout *hbox_setting = new QHBoxLayout();
+            QHBoxLayout *hbox_ip_setting = new QHBoxLayout();
+            QHBoxLayout *hbox_top_setting = new QHBoxLayout();
             QVBoxLayout *vbox_data_show = new QVBoxLayout();
             QHBoxLayout *hbox_bottom = new QHBoxLayout();
             QVBoxLayout *vbox_traj = new QVBoxLayout();
@@ -325,36 +331,41 @@ class AutoLandMainWindow : public QDialog
             // 标题行
             vbox->addWidget(title_label);
             // 设置
-            hbox_1_1->addWidget(recive_ip_addr_label);
-            hbox_1_1->addWidget(recive_ip_addr_edit);
-            hbox_1_2->addWidget(send_ip_addr_label);
-            hbox_1_2->addWidget(send_ip_addr_edit);
-            hbox_1_3->addWidget(estimator_label);
-            hbox_1_3->addWidget(estimator_combobox);
-            vbox_1->addLayout(hbox_1_1);
-            vbox_1->addLayout(hbox_1_2);
-            vbox_1->addLayout(hbox_1_3);
-            hbox_2_1->addWidget(recive_ip_port_label);
-            hbox_2_1->addWidget(recive_ip_port_edit);
-            hbox_2_2->addWidget(send_ip_port_label);
-            hbox_2_2->addWidget(send_ip_port_edit);
-            hbox_2_3->addWidget(controller_label);
-            hbox_2_3->addWidget(controller_combobox);
-            vbox_2->addLayout(hbox_2_1);
-            vbox_2->addLayout(hbox_2_2);
-            vbox_2->addLayout(hbox_2_3);
-            vbox_3->addWidget(recive_ip_test_button);
-            vbox_3->addWidget(send_ip_test_button);
-            vbox_3->addWidget(start_button);
-            hbox_setting->addLayout(vbox_1, 2);
-            hbox_setting->addLayout(vbox_2, 1);
-            hbox_setting->addLayout(vbox_3, 1);
-            vbox->addLayout(hbox_setting);
+            // IP 设置
+            hbox_ip_addr_1->addWidget(recive_ip_addr_label);
+            hbox_ip_addr_1->addWidget(recive_ip_addr_edit);
+            hbox_ip_addr_2->addWidget(send_ip_addr_label);
+            hbox_ip_addr_2->addWidget(send_ip_addr_edit);
+            hbox_ip_addr_3->addWidget(estimator_label);
+            hbox_ip_addr_3->addWidget(estimator_combobox);
+            vbox_ip_addr->addLayout(hbox_ip_addr_1);
+            vbox_ip_addr->addLayout(hbox_ip_addr_2);
+            vbox_ip_addr->addLayout(hbox_ip_addr_3);
+            hbox_ip_port_1->addWidget(recive_ip_port_label);
+            hbox_ip_port_1->addWidget(recive_ip_port_edit);
+            hbox_ip_port_2->addWidget(send_ip_port_label);
+            hbox_ip_port_2->addWidget(send_ip_port_edit);
+            hbox_ip_port_3->addWidget(controller_label);
+            hbox_ip_port_3->addWidget(controller_combobox);
+            vbox_ip_port->addLayout(hbox_ip_port_1);
+            vbox_ip_port->addLayout(hbox_ip_port_2);
+            vbox_ip_port->addLayout(hbox_ip_port_3);
+            hbox_ip_setting->addLayout(vbox_ip_addr, 2);
+            hbox_ip_setting->addLayout(vbox_ip_port, 1);
+            vbox_top_setting->addLayout(hbox_ip_setting);
             // 保存路径设置
             hbox_save_path->addWidget(save_data_path_label);
             hbox_save_path->addWidget(save_data_path_edit);
             hbox_save_path->addWidget(save_data_path_button);
-            vbox->addLayout(hbox_save_path);
+            vbox_top_setting->addLayout(hbox_save_path);
+            // 按钮排布
+            vbox_top_buttons->addWidget(recive_ip_test_button);
+            vbox_top_buttons->addWidget(send_ip_test_button);
+            vbox_top_buttons->addWidget(start_button);
+            vbox_top_buttons->addWidget(data_replay_button);
+            hbox_top_setting->addLayout(vbox_top_setting, 3);
+            hbox_top_setting->addLayout(vbox_top_buttons, 1);
+            vbox->addLayout(hbox_top_setting);
             // 导出设置
             hbox_export_setting->addWidget(export_label);
             hbox_export_setting->addWidget(export_checkbox);

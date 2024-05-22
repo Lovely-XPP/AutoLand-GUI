@@ -34,5 +34,5 @@ include_directories(
     ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME} include/MainWindow.h src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} Qt5::Widgets Qt5::DataVisualization ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${OpenCV_LIBS})
